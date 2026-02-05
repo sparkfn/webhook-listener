@@ -78,11 +78,22 @@
       .detail {
         padding: 16px;
       }
-      .kv {
-        display: grid;
-        grid-template-columns: 140px 1fr;
-        gap: 8px;
+      .table {
+        width: 100%;
+        border-collapse: collapse;
         margin-bottom: 16px;
+      }
+      .table th,
+      .table td {
+        text-align: left;
+        padding: 8px 10px;
+        border-bottom: 1px solid var(--border);
+        vertical-align: top;
+      }
+      .table th {
+        color: var(--muted);
+        font-weight: 500;
+        width: 180px;
       }
       pre {
         background: #0c0f17;
@@ -101,6 +112,23 @@
         color: var(--accent);
         border: 1px solid #2f4764;
         margin-left: 6px;
+      }
+      .toggle {
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+        margin-right: 12px;
+        color: var(--muted);
+        font-size: 12px;
+      }
+      .payload-tools {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        margin: 8px 0;
+      }
+      .muted {
+        color: var(--muted);
       }
       @media (max-width: 900px) {
         main { grid-template-columns: 1fr; }
@@ -132,14 +160,22 @@
           <div class="title">Details</div>
         </header>
         <div class="detail">
-          <div id="meta" class="kv"></div>
+          <h3>Request Details</h3>
+          <table class="table" id="meta"></table>
           <h3>Query Strings</h3>
-          <pre id="query"></pre>
+          <table class="table" id="query"></table>
           <h3>Form Values</h3>
-          <pre id="form"></pre>
+          <table class="table" id="form"></table>
           <h3>Headers</h3>
-          <pre id="headers"></pre>
-          <h3>Payload</h3>
+          <table class="table" id="headers"></table>
+          <h3>Request Content</h3>
+          <div class="payload-tools">
+            <div>
+              <label class="toggle"><input type="checkbox" id="formatJson" checked /> Format JSON</label>
+              <label class="toggle"><input type="checkbox" id="wrap" checked /> Word Wrap</label>
+            </div>
+            <div class="muted" id="payloadMeta"></div>
+          </div>
           <pre id="payload"></pre>
         </div>
       </section>
@@ -152,6 +188,9 @@
       const formEl = document.getElementById("form");
       const headersEl = document.getElementById("headers");
       const payloadEl = document.getElementById("payload");
+      const payloadMetaEl = document.getElementById("payloadMeta");
+      const formatJsonEl = document.getElementById("formatJson");
+      const wrapEl = document.getElementById("wrap");
       const statusEl = document.getElementById("status");
 
       let events = [];
@@ -176,21 +215,47 @@
 
       function showEvent(evt) {
         metaEl.innerHTML = `
-          <div>id</div><div>${evt.id}</div>
-          <div>namespace</div><div>${evt.namespace}</div>
-          <div>method</div><div>${evt.method}</div>
-          <div>path</div><div>${evt.path}</div>
-          <div>timestamp</div><div>${evt.timestamp}</div>
-          <div>remote</div><div>${evt.remoteAddress}</div>
+          <tr><th>Method</th><td>${evt.method}</td></tr>
+          <tr><th>URL</th><td>${evt.fullUrl || evt.path}</td></tr>
+          <tr><th>Host</th><td>${evt.host || ""}</td></tr>
+          <tr><th>Date</th><td>${evt.timestamp}</td></tr>
+          <tr><th>Size</th><td>${evt.sizeBytes} bytes</td></tr>
+          <tr><th>Time</th><td>${evt.durationMs.toFixed(3)} ms</td></tr>
+          <tr><th>ID</th><td>${evt.id}</td></tr>
+          <tr><th>Remote</th><td>${evt.remoteAddress}</td></tr>
+          <tr><th>User-Agent</th><td>${evt.userAgent || ""}</td></tr>
         `;
-        queryEl.textContent = JSON.stringify(evt.queryStrings || [], null, 2);
-        formEl.textContent = JSON.stringify(
-          { values: evt.formValues || [], files: evt.formFiles || [] },
-          null,
-          2
-        );
-        headersEl.textContent = JSON.stringify(evt.headers, null, 2);
-        if (evt.bodyJson !== undefined && evt.bodyJson !== null) {
+
+        const qs = evt.queryStrings || [];
+        queryEl.innerHTML = qs.length
+          ? qs.map((q) => `<tr><th>${q.name}</th><td>${q.value}</td></tr>`).join("")
+          : `<tr><th colspan=\"2\">None</th></tr>`;
+
+        const formValues = evt.formValues || [];
+        const formFiles = evt.formFiles || [];
+        const formRows = [
+          ...formValues.map((f) => `<tr><th>${f.name}</th><td>${f.value}</td></tr>`),
+          ...formFiles.map(
+            (f) => `<tr><th>${f.name}</th><td>${f.filename} (${f.mimeType})</td></tr>`
+          )
+        ];
+        formEl.innerHTML = formRows.length
+          ? formRows.join("")
+          : `<tr><th colspan=\"2\">None</th></tr>`;
+
+        headersEl.innerHTML = Object.entries(evt.headers || {})
+          .map(([k, v]) => `<tr><th>${k}</th><td>${Array.isArray(v) ? v.join(\", \") : v}</td></tr>`)
+          .join("");
+
+        const size = evt.sizeBytes || 0;
+        payloadMetaEl.textContent = evt.contentLength
+          ? `content-length: ${evt.contentLength} | ${size} bytes`
+          : `${size} bytes`;
+
+        const useWrap = wrapEl.checked;
+        payloadEl.style.whiteSpace = useWrap ? "pre-wrap" : "pre";
+
+        if (evt.bodyJson !== undefined && evt.bodyJson !== null && formatJsonEl.checked) {
           payloadEl.textContent = JSON.stringify(evt.bodyJson, null, 2);
         } else {
           payloadEl.textContent = evt.bodyRaw || "(empty)";
@@ -242,6 +307,15 @@
           } catch {}
         };
       }
+
+      function refreshActive() {
+        if (events.length) {
+          showEvent(events[events.length - 1]);
+        }
+      }
+
+      formatJsonEl.addEventListener("change", refreshActive);
+      wrapEl.addEventListener("change", refreshActive);
 
       (async () => {
         await loadNamespaces();

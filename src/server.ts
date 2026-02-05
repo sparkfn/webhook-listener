@@ -17,6 +17,8 @@ const app = express();
 const server = http.createServer(app);
 const wss = new WebSocketServer({ server, path: "/ws" });
 
+app.set("trust proxy", true);
+
 // Capture raw body for any content-type.
 app.use(
   express.raw({
@@ -64,6 +66,7 @@ type EventRecord = {
   timestamp: string;
   method: string;
   path: string;
+  fullUrl: string;
   query: Record<string, string | string[]>;
   queryStrings: Array<{ name: string; value: string }>;
   headers: Record<string, string | string[]>;
@@ -72,6 +75,11 @@ type EventRecord = {
   formValues?: Array<{ name: string; value: string }>;
   formFiles?: Array<{ name: string; filename: string; mimeType: string }>;
   remoteAddress: string;
+  host?: string;
+  userAgent?: string;
+  contentLength?: string;
+  sizeBytes: number;
+  durationMs: number;
 };
 
 const inMemory: Record<string, EventRecord[]> = {};
@@ -135,6 +143,7 @@ function parseMultipart(
 }
 
 app.all("/hook/:ns", async (req, res) => {
+  const start = process.hrtime.bigint();
   const ns = String(req.params.ns ?? "");
   if (!ensureNamespace(ns)) {
     return res.status(404).json({ error: "namespace_not_found" });
@@ -168,12 +177,17 @@ app.all("/hook/:ns", async (req, res) => {
     }
   }
 
+  const durationMs = Number(process.hrtime.bigint() - start) / 1_000_000;
+  const host = String(req.headers["host"] ?? "");
+  const fullUrl = host ? `${req.protocol}://${host}${req.originalUrl}` : req.originalUrl;
+
   const event: EventRecord = {
     id: randomUUID(),
     namespace: ns,
     timestamp: new Date().toISOString(),
     method: req.method,
     path: req.originalUrl,
+    fullUrl,
     query: req.query as Record<string, string | string[]>,
     queryStrings: parseQueryList(req.originalUrl),
     headers: req.headers as Record<string, string | string[]>,
@@ -181,7 +195,12 @@ app.all("/hook/:ns", async (req, res) => {
     bodyJson,
     formValues,
     formFiles,
-    remoteAddress: req.socket.remoteAddress ?? ""
+    remoteAddress: req.ip ?? req.socket.remoteAddress ?? "",
+    host,
+    userAgent: String(req.headers["user-agent"] ?? ""),
+    contentLength: String(req.headers["content-length"] ?? ""),
+    sizeBytes: bodyBuffer.length,
+    durationMs
   };
 
   inMemory[ns] = inMemory[ns] ?? [];

@@ -1,0 +1,21 @@
+services:
+  web:
+    build: .
+    environment:
+      - PORT=18800
+      - DATA_DIR=/data
+      - NAMESPACES=alpha,beta,dev
+    volumes:
+      - ./data:/data
+    expose:
+      - "18800"
+
+  proxy:
+    image: caddy:2
+    ports:
+      - "18800:80"
+      - "14433:443"
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile:ro
+    depends_on:
+      - web

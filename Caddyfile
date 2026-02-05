@@ -1,0 +1,7 @@
+:80 {
+  reverse_proxy web:18800
+}
+
+:443 {
+  reverse_proxy web:18800
+}

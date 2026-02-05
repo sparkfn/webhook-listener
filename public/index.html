@@ -1,0 +1,241 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Webhook Listener</title>
+    <style>
+      :root {
+        --bg: #0f1115;
+        --panel: #151924;
+        --panel-2: #1b2130;
+        --text: #e6e9ef;
+        --muted: #9aa3b2;
+        --accent: #6de1ff;
+        --accent-2: #8bffb0;
+        --border: #2a3245;
+      }
+      * { box-sizing: border-box; }
+      body {
+        margin: 0;
+        font-family: "Space Grotesk", system-ui, sans-serif;
+        background: radial-gradient(1200px 600px at 80% -20%, #1f2a44 0%, rgba(15,17,21,0) 60%), var(--bg);
+        color: var(--text);
+      }
+      header {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        padding: 16px 20px;
+        border-bottom: 1px solid var(--border);
+        background: rgba(10, 12, 16, 0.8);
+        position: sticky;
+        top: 0;
+        z-index: 5;
+        backdrop-filter: blur(6px);
+      }
+      .title { font-weight: 600; letter-spacing: 0.5px; }
+      .controls {
+        display: flex;
+        gap: 8px;
+        align-items: center;
+      }
+      select {
+        background: var(--panel);
+        color: var(--text);
+        border: 1px solid var(--border);
+        padding: 6px 10px;
+        border-radius: 8px;
+      }
+      main {
+        display: grid;
+        grid-template-columns: 320px 1fr;
+        gap: 16px;
+        padding: 16px;
+      }
+      .panel {
+        background: var(--panel);
+        border: 1px solid var(--border);
+        border-radius: 12px;
+        overflow: hidden;
+      }
+      .panel header {
+        position: static;
+        background: var(--panel-2);
+        border-bottom: 1px solid var(--border);
+      }
+      .events {
+        max-height: calc(100vh - 140px);
+        overflow: auto;
+      }
+      .event {
+        padding: 10px 12px;
+        border-bottom: 1px solid var(--border);
+        cursor: pointer;
+      }
+      .event.active { background: #222a3d; }
+      .event small { color: var(--muted); }
+      .detail {
+        padding: 16px;
+      }
+      .kv {
+        display: grid;
+        grid-template-columns: 140px 1fr;
+        gap: 8px;
+        margin-bottom: 16px;
+      }
+      pre {
+        background: #0c0f17;
+        border: 1px solid var(--border);
+        padding: 12px;
+        border-radius: 8px;
+        overflow: auto;
+        max-height: 360px;
+      }
+      .pill {
+        display: inline-block;
+        padding: 2px 8px;
+        border-radius: 999px;
+        font-size: 12px;
+        background: #1b2a3d;
+        color: var(--accent);
+        border: 1px solid #2f4764;
+        margin-left: 6px;
+      }
+      @media (max-width: 900px) {
+        main { grid-template-columns: 1fr; }
+        .events { max-height: 300px; }
+      }
+    </style>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;600&display=swap" rel="stylesheet" />
+  </head>
+  <body>
+    <header>
+      <div class="title">Webhook Listener</div>
+      <div class="controls">
+        <label for="ns">Namespace</label>
+        <select id="ns"></select>
+        <span id="status" class="pill">offline</span>
+      </div>
+    </header>
+    <main>
+      <section class="panel">
+        <header>
+          <div class="title">Events</div>
+        </header>
+        <div id="events" class="events"></div>
+      </section>
+      <section class="panel">
+        <header>
+          <div class="title">Details</div>
+        </header>
+        <div class="detail">
+          <div id="meta" class="kv"></div>
+          <h3>Headers</h3>
+          <pre id="headers"></pre>
+          <h3>Payload</h3>
+          <pre id="payload"></pre>
+        </div>
+      </section>
+    </main>
+    <script>
+      const nsSelect = document.getElementById("ns");
+      const eventsEl = document.getElementById("events");
+      const metaEl = document.getElementById("meta");
+      const headersEl = document.getElementById("headers");
+      const payloadEl = document.getElementById("payload");
+      const statusEl = document.getElementById("status");
+
+      let events = [];
+      let currentNs = "";
+
+      function setStatus(text, ok) {
+        statusEl.textContent = text;
+        statusEl.style.color = ok ? "var(--accent-2)" : "var(--accent)";
+      }
+
+      function renderEvents() {
+        eventsEl.innerHTML = "";
+        events.slice().reverse().forEach((evt) => {
+          const div = document.createElement("div");
+          div.className = "event";
+          div.innerHTML = `<div><strong>${evt.method}</strong> <small>${evt.timestamp}</small></div>` +
+            `<div><small>${evt.path}</small></div>`;
+          div.onclick = () => showEvent(evt);
+          eventsEl.appendChild(div);
+        });
+      }
+
+      function showEvent(evt) {
+        metaEl.innerHTML = `
+          <div>id</div><div>${evt.id}</div>
+          <div>namespace</div><div>${evt.namespace}</div>
+          <div>method</div><div>${evt.method}</div>
+          <div>path</div><div>${evt.path}</div>
+          <div>timestamp</div><div>${evt.timestamp}</div>
+          <div>remote</div><div>${evt.remoteAddress}</div>
+        `;
+        headersEl.textContent = JSON.stringify(evt.headers, null, 2);
+        if (evt.bodyJson !== undefined && evt.bodyJson !== null) {
+          payloadEl.textContent = JSON.stringify(evt.bodyJson, null, 2);
+        } else {
+          payloadEl.textContent = evt.bodyRaw || "(empty)";
+        }
+      }
+
+      async function loadNamespaces() {
+        const res = await fetch("/api/namespaces");
+        const data = await res.json();
+        nsSelect.innerHTML = "";
+        data.namespaces.forEach((ns) => {
+          const opt = document.createElement("option");
+          opt.value = ns;
+          opt.textContent = ns;
+          nsSelect.appendChild(opt);
+        });
+        currentNs = data.namespaces[0] || "";
+        nsSelect.value = currentNs;
+      }
+
+      async function loadEvents() {
+        if (!currentNs) return;
+        const res = await fetch(`/api/events?ns=${encodeURIComponent(currentNs)}`);
+        const data = await res.json();
+        events = data.events || [];
+        renderEvents();
+        if (events.length) {
+          showEvent(events[events.length - 1]);
+        }
+      }
+
+      nsSelect.addEventListener("change", async () => {
+        currentNs = nsSelect.value;
+        await loadEvents();
+      });
+
+      function connectWs() {
+        const proto = location.protocol === "https:" ? "wss" : "ws";
+        const ws = new WebSocket(`${proto}://${location.host}/ws`);
+        ws.onopen = () => setStatus("live", true);
+        ws.onclose = () => setStatus("offline", false);
+        ws.onmessage = (msg) => {
+          try {
+            const data = JSON.parse(msg.data);
+            if (data.type === "event" && data.event.namespace === currentNs) {
+              events.push(data.event);
+              renderEvents();
+            }
+          } catch {}
+        };
+      }
+
+      (async () => {
+        await loadNamespaces();
+        await loadEvents();
+        connectWs();
+      })();
+    </script>
+  </body>
+</html>

@@ -133,6 +133,10 @@
         </header>
         <div class="detail">
           <div id="meta" class="kv"></div>
+          <h3>Query Strings</h3>
+          <pre id="query"></pre>
+          <h3>Form Values</h3>
+          <pre id="form"></pre>
           <h3>Headers</h3>
           <pre id="headers"></pre>
           <h3>Payload</h3>
@@ -144,6 +148,8 @@
       const nsSelect = document.getElementById("ns");
       const eventsEl = document.getElementById("events");
       const metaEl = document.getElementById("meta");
+      const queryEl = document.getElementById("query");
+      const formEl = document.getElementById("form");
       const headersEl = document.getElementById("headers");
       const payloadEl = document.getElementById("payload");
       const statusEl = document.getElementById("status");
@@ -177,6 +183,12 @@
           <div>timestamp</div><div>${evt.timestamp}</div>
           <div>remote</div><div>${evt.remoteAddress}</div>
         `;
+        queryEl.textContent = JSON.stringify(evt.queryStrings || [], null, 2);
+        formEl.textContent = JSON.stringify(
+          { values: evt.formValues || [], files: evt.formFiles || [] },
+          null,
+          2
+        );
         headersEl.textContent = JSON.stringify(evt.headers, null, 2);
         if (evt.bodyJson !== undefined && evt.bodyJson !== null) {
           payloadEl.textContent = JSON.stringify(evt.bodyJson, null, 2);

@@ -9,11 +9,13 @@
     "start": "node dist/server.js"
   },
   "dependencies": {
+    "busboy": "^1.6.0",
     "express": "^4.19.2",
     "ws": "^8.17.1"
   },
   "devDependencies": {
     "@types/express": "^4.17.21",
+    "@types/busboy": "^1.5.4",
     "@types/node": "^22.10.5",
     "@types/ws": "^8.5.10",
     "tsx": "^4.19.2",

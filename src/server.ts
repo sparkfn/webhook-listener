@@ -2,6 +2,7 @@ import fs from "node:fs";
 import path from "node:path";
 import http from "node:http";
 import express from "express";
+import Busboy from "busboy";
 import { WebSocketServer } from "ws";
 import { randomUUID } from "node:crypto";
 
@@ -64,9 +65,12 @@ type EventRecord = {
   method: string;
   path: string;
   query: Record<string, string | string[]>;
+  queryStrings: Array<{ name: string; value: string }>;
   headers: Record<string, string | string[]>;
   bodyRaw: string;
   bodyJson?: unknown;
+  formValues?: Array<{ name: string; value: string }>;
+  formFiles?: Array<{ name: string; filename: string; mimeType: string }>;
   remoteAddress: string;
 };
 
@@ -88,7 +92,49 @@ app.get("/api/events", (req, res) => {
   res.json({ events: inMemory[ns] ?? [] });
 });
 
-app.all("/hook/:ns", (req, res) => {
+function parseQueryList(urlPath: string) {
+  const url = new URL(urlPath, "http://local");
+  const list: Array<{ name: string; value: string }> = [];
+  url.searchParams.forEach((value, name) => {
+    list.push({ name, value });
+  });
+  return list;
+}
+
+function parseUrlEncoded(bodyRaw: string) {
+  const params = new URLSearchParams(bodyRaw);
+  const list: Array<{ name: string; value: string }> = [];
+  for (const [name, value] of params.entries()) {
+    list.push({ name, value });
+  }
+  return list;
+}
+
+function parseMultipart(
+  bodyBuffer: Buffer,
+  contentType: string
+): Promise<{
+  fields: Array<{ name: string; value: string }>;
+  files: Array<{ name: string; filename: string; mimeType: string }>;
+}> {
+  return new Promise((resolve, reject) => {
+    const fields: Array<{ name: string; value: string }> = [];
+    const files: Array<{ name: string; filename: string; mimeType: string }> = [];
+    const bb = Busboy({ headers: { "content-type": contentType } });
+    bb.on("field", (name, value) => {
+      fields.push({ name, value });
+    });
+    bb.on("file", (name, file, info) => {
+      files.push({ name, filename: info.filename, mimeType: info.mimeType });
+      file.resume();
+    });
+    bb.on("error", reject);
+    bb.on("finish", () => resolve({ fields, files }));
+    bb.end(bodyBuffer);
+  });
+}
+
+app.all("/hook/:ns", async (req, res) => {
   const ns = String(req.params.ns ?? "");
   if (!ensureNamespace(ns)) {
     return res.status(404).json({ error: "namespace_not_found" });
@@ -104,6 +150,24 @@ app.all("/hook/:ns", (req, res) => {
     bodyJson = undefined;
   }
 
+  const contentType = String(req.headers["content-type"] ?? "");
+  let formValues: Array<{ name: string; value: string }> | undefined = undefined;
+  let formFiles: Array<{ name: string; filename: string; mimeType: string }> | undefined =
+    undefined;
+
+  if (contentType.includes("application/x-www-form-urlencoded")) {
+    formValues = parseUrlEncoded(bodyRaw);
+  } else if (contentType.includes("multipart/form-data")) {
+    try {
+      const parsed = await parseMultipart(bodyBuffer, contentType);
+      formValues = parsed.fields;
+      formFiles = parsed.files;
+    } catch {
+      formValues = undefined;
+      formFiles = undefined;
+    }
+  }
+
   const event: EventRecord = {
     id: randomUUID(),
     namespace: ns,
@@ -111,9 +175,12 @@ app.all("/hook/:ns", (req, res) => {
     method: req.method,
     path: req.originalUrl,
     query: req.query as Record<string, string | string[]>,
+    queryStrings: parseQueryList(req.originalUrl),
     headers: req.headers as Record<string, string | string[]>,
     bodyRaw,
     bodyJson,
+    formValues,
+    formFiles,
     remoteAddress: req.socket.remoteAddress ?? ""
   };
 

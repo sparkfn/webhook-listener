@@ -1,10 +1,11 @@
 services:
   web:
     build: .
+    env_file:
+      - .env
     environment:
       - PORT=18800
       - DATA_DIR=/data
-      - NAMESPACES=alpha,beta,dev
     volumes:
       - ./data:/data
     expose:
@@ -15,6 +16,8 @@ services:
     ports:
       - "18800:80"
       - "14433:443"
+    environment:
+      - UPSTREAM=web:18800
     volumes:
       - ./Caddyfile:/etc/caddy/Caddyfile:ro
     depends_on:

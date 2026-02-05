@@ -67,6 +67,8 @@
         grid-template-columns: 320px 1fr;
         gap: 16px;
         padding: 16px;
+        max-width: 1400px;
+        margin: 0 auto;
       }
       .panel {
         background: var(--panel);
@@ -88,10 +90,20 @@
         border-bottom: 1px solid var(--border);
         cursor: pointer;
       }
-      .event.active { background: #222a3d; }
+      .event.active {
+        background: #222a3d;
+        border-left: 3px solid var(--accent);
+      }
       .event small { color: var(--muted); }
       .detail {
         padding: 16px;
+        display: grid;
+        gap: 16px;
+      }
+      .detail-grid {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 16px;
       }
       .table {
         width: 100%;
@@ -149,6 +161,9 @@
         main { grid-template-columns: 1fr; }
         .events { max-height: 300px; }
       }
+      @media (max-width: 1100px) {
+        .detail-grid { grid-template-columns: 1fr; }
+      }
     </style>
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
@@ -178,23 +193,37 @@
           <div class="title">Details</div>
         </header>
         <div class="detail">
-          <h3>Request Details</h3>
-          <table class="table" id="meta"></table>
-          <h3>Query Strings</h3>
-          <table class="table" id="query"></table>
-          <h3>Form Values</h3>
-          <table class="table" id="form"></table>
-          <h3>Headers</h3>
-          <table class="table" id="headers"></table>
-          <h3>Request Content</h3>
-          <div class="payload-tools">
-            <div>
-              <label class="toggle"><input type="checkbox" id="formatJson" checked /> Format JSON</label>
-              <label class="toggle"><input type="checkbox" id="wrap" checked /> Word Wrap</label>
-            </div>
-            <div class="muted" id="payloadMeta"></div>
+          <div class="detail-grid">
+            <section>
+              <h3>Request Details</h3>
+              <table class="table" id="meta"></table>
+            </section>
+            <section>
+              <h3>Headers</h3>
+              <table class="table" id="headers"></table>
+            </section>
           </div>
-          <pre id="payload"></pre>
+          <div class="detail-grid">
+            <section>
+              <h3>Query Strings</h3>
+              <table class="table" id="query"></table>
+            </section>
+            <section>
+              <h3>Form Values</h3>
+              <table class="table" id="form"></table>
+            </section>
+          </div>
+          <section>
+            <h3>Request Content</h3>
+            <div class="payload-tools">
+              <div>
+                <label class="toggle"><input type="checkbox" id="formatJson" checked /> Format JSON</label>
+                <label class="toggle"><input type="checkbox" id="wrap" checked /> Word Wrap</label>
+              </div>
+              <div class="muted" id="payloadMeta"></div>
+            </div>
+            <pre id="payload"></pre>
+          </section>
         </div>
       </section>
     </main>
@@ -214,6 +243,7 @@
 
       let events = [];
       let currentNs = "";
+      let activeId = "";
 
       function setStatus(text, ok) {
         statusEl.textContent = text;
@@ -225,9 +255,16 @@
         events.slice().reverse().forEach((evt) => {
           const div = document.createElement("div");
           div.className = "event";
+          if (evt.id === activeId) {
+            div.classList.add("active");
+          }
           div.innerHTML = `<div><strong>${evt.method}</strong> <small>${evt.timestamp}</small></div>` +
             `<div><small>${evt.path}</small></div>`;
-          div.onclick = () => showEvent(evt);
+          div.onclick = () => {
+            activeId = evt.id;
+            showEvent(evt);
+            renderEvents();
+          };
           eventsEl.appendChild(div);
         });
       }
@@ -305,7 +342,9 @@
         events = data.events || [];
         renderEvents();
         if (events.length) {
+          activeId = events[events.length - 1].id;
           showEvent(events[events.length - 1]);
+          renderEvents();
         }
       }
 
@@ -323,10 +362,12 @@
         ws.onmessage = (msg) => {
           try {
             const data = JSON.parse(msg.data);
-            if (data.type === "event" && data.event.namespace === currentNs) {
-              events.push(data.event);
-              renderEvents();
-            }
+          if (data.type === "event" && data.event.namespace === currentNs) {
+            events.push(data.event);
+            activeId = data.event.id;
+            renderEvents();
+            showEvent(data.event);
+          }
           } catch {}
         };
       }

@@ -1,0 +1,14 @@
+services:
+  web:
+    environment:
+      - NODE_ENV=development
+      - CHOKIDAR_USEPOLLING=1
+    volumes:
+      - ./:/app
+      - /app/node_modules
+      - ./data:/data
+    command: sh -c "npm install && npm run dev"
+
+  proxy:
+    environment:
+      - UPSTREAM=web:18800

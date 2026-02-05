@@ -1,7 +1,7 @@
 :80 {
-  reverse_proxy web:18800
+  reverse_proxy {env.UPSTREAM}
 }
 
 :443 {
-  reverse_proxy web:18800
+  reverse_proxy {env.UPSTREAM}
 }

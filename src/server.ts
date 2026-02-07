@@ -100,6 +100,28 @@ app.get("/api/events", (req, res) => {
   res.json({ events: inMemory[ns] ?? [] });
 });
 
+app.delete("/api/events", (req, res) => {
+  const ns = String(req.query.ns ?? "");
+  if (!ensureNamespace(ns)) {
+    return res.status(404).json({ error: "namespace_not_found" });
+  }
+  // Clear in-memory
+  inMemory[ns] = [];
+  // Clear on disk
+  const file = eventsFile(ns);
+  if (fs.existsSync(file)) {
+    fs.writeFileSync(file, "");
+  }
+  // Broadcast clear event to all clients
+  const payload = JSON.stringify({ type: "clear", namespace: ns });
+  for (const client of wss.clients) {
+    if (client.readyState === 1) {
+      client.send(payload);
+    }
+  }
+  res.json({ ok: true });
+});
+
 function parseQueryList(urlPath: string) {
   const url = new URL(urlPath, "http://local");
   const list: Array<{ name: string; value: string }> = [];

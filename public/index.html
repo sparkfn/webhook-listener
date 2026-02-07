@@ -1,278 +1,466 @@
 <!doctype html>
 <html lang="en">
-  <head>
-    <meta charset="utf-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <title>Webhook Listener</title>
-    <style>
-      :root {
-        --bg: #0f1115;
-        --panel: #151924;
-        --panel-2: #1b2130;
-        --text: #e6e9ef;
-        --muted: #9aa3b2;
-        --accent: #6de1ff;
-        --accent-2: #8bffb0;
-        --border: #2a3245;
-      }
-      * { box-sizing: border-box; }
-      body {
-        margin: 0;
-        font-family: "Space Grotesk", system-ui, sans-serif;
-        background: radial-gradient(1200px 600px at 80% -20%, #1f2a44 0%, rgba(15,17,21,0) 60%), var(--bg);
-        color: var(--text);
-      }
-      header {
-        display: flex;
-        align-items: center;
-        justify-content: space-between;
-        padding: 16px 20px;
-        border-bottom: 1px solid var(--border);
-        background: rgba(10, 12, 16, 0.8);
-        position: sticky;
-        top: 0;
-        z-index: 5;
-        backdrop-filter: blur(6px);
-      }
-      .title { font-weight: 600; letter-spacing: 0.5px; }
-      .title-wrap {
-        display: flex;
-        align-items: baseline;
-        gap: 12px;
-        flex-wrap: wrap;
-      }
-      .hook-url {
-        font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, "Liberation Mono", monospace;
-        font-size: 12px;
-        color: var(--accent);
-        background: #0b0f17;
-        border: 1px solid var(--border);
-        padding: 4px 8px;
-        border-radius: 8px;
-      }
-      .controls {
-        display: flex;
-        gap: 8px;
-        align-items: center;
-      }
-      select {
-        background: var(--panel);
-        color: var(--text);
-        border: 1px solid var(--border);
-        padding: 6px 10px;
-        border-radius: 8px;
-      }
+
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Webhook Listener</title>
+  <style>
+    :root {
+      --bg: #0f1115;
+      --panel: #151924;
+      --panel-2: #1b2130;
+      --text: #e6e9ef;
+      --muted: #9aa3b2;
+      --accent: #6de1ff;
+      --accent-2: #8bffb0;
+      --border: #2a3245;
+      --pre-bg: #0c0f17;
+      --event-active: #222a3d;
+      --pill-bg: #1b2a3d;
+      --pill-border: #2f4764;
+      --header-bg: rgba(10, 12, 16, 0.8);
+      --radial-color: #1f2a44;
+      --hook-url-bg: #0b0f17;
+    }
+
+    [data-theme="light"] {
+      --bg: #f5f7fa;
+      --panel: #ffffff;
+      --panel-2: #f0f2f5;
+      --text: #1a1d24;
+      --muted: #5c6370;
+      --accent: #0077b6;
+      --accent-2: #00a676;
+      --border: #dde1e7;
+      --pre-bg: #f8f9fb;
+      --event-active: #e8f4ff;
+      --pill-bg: #e1f0ff;
+      --pill-border: #b8d4f0;
+      --header-bg: rgba(255, 255, 255, 0.9);
+      --radial-color: #dbe4f0;
+      --hook-url-bg: #e8edf5;
+    }
+
+    * {
+      box-sizing: border-box;
+    }
+
+    body {
+      margin: 0;
+      font-family: "Space Grotesk", system-ui, sans-serif;
+      background: radial-gradient(1200px 600px at 80% -20%, var(--radial-color) 0%, transparent 60%), var(--bg);
+      color: var(--text);
+      transition: background-color 0.3s ease, color 0.3s ease;
+    }
+
+    .panel,
+    header,
+    pre,
+    select,
+    .event,
+    .hook-url,
+    .pill {
+      transition: background-color 0.3s ease, border-color 0.3s ease, color 0.3s ease;
+    }
+
+    header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 10px 16px;
+      border-bottom: 1px solid var(--border);
+      background: var(--header-bg);
+      position: sticky;
+      top: 0;
+      z-index: 5;
+      backdrop-filter: blur(6px);
+    }
+
+    .title {
+      font-weight: 600;
+      font-size: 14px;
+      letter-spacing: 0.5px;
+    }
+
+    .title-wrap {
+      display: flex;
+      align-items: baseline;
+      gap: 12px;
+      flex-wrap: wrap;
+    }
+
+    .hook-url {
+      font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, "Liberation Mono", monospace;
+      font-size: 11px;
+      color: var(--accent);
+      background: var(--hook-url-bg);
+      border: 1px solid var(--border);
+      padding: 3px 6px;
+      border-radius: 6px;
+    }
+
+    .controls {
+      display: flex;
+      gap: 12px;
+      align-items: center;
+    }
+
+    .ns-group {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      background: var(--panel-2);
+      padding: 4px 10px;
+      border-radius: 8px;
+      border: 1px solid var(--border);
+    }
+
+    .ns-group label {
+      font-size: 10px;
+      color: var(--muted);
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+    }
+
+    select {
+      background: var(--panel);
+      color: var(--text);
+      border: 1px solid var(--border);
+      padding: 4px 8px;
+      border-radius: 6px;
+      font-size: 12px;
+      font-weight: 600;
+      min-width: 100px;
+      cursor: pointer;
+    }
+
+    select:hover {
+      border-color: var(--accent);
+    }
+
+    .btn {
+      background: var(--panel-2);
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      padding: 4px 10px;
+      cursor: pointer;
+      color: var(--text);
+      font-size: 11px;
+      transition: all 0.2s ease;
+    }
+
+    .btn:hover {
+      background: var(--panel);
+      border-color: var(--accent);
+    }
+
+    .btn-danger {
+      color: #ff6b6b;
+      border-color: #ff6b6b40;
+    }
+
+    .btn-danger:hover {
+      background: #ff6b6b20;
+      border-color: #ff6b6b;
+    }
+
+    .btn-confirm {
+      background: #ff6b6b;
+      color: white;
+      border-color: #ff6b6b;
+    }
+
+    .btn-confirm:hover {
+      background: #ff5252;
+    }
+
+    main {
+      display: grid;
+      grid-template-columns: 320px 1fr;
+      gap: 16px;
+      padding: 16px;
+      max-width: 1400px;
+      margin: 0 auto;
+    }
+
+    .panel {
+      background: var(--panel);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      overflow: hidden;
+    }
+
+    .panel header {
+      position: static;
+      background: var(--panel-2);
+      border-bottom: 1px solid var(--border);
+    }
+
+    .events {
+      max-height: calc(100vh - 140px);
+      overflow: auto;
+    }
+
+    .event {
+      padding: 8px 10px;
+      border-bottom: 1px solid var(--border);
+      cursor: pointer;
+      font-size: 12px;
+    }
+
+    .event.active {
+      background: var(--event-active);
+      border-left: 3px solid var(--accent);
+    }
+
+    .event small {
+      color: var(--muted);
+      font-size: 10px;
+    }
+
+    .detail {
+      padding: 12px;
+      display: grid;
+      gap: 12px;
+      font-size: 12px;
+    }
+
+    .detail-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 16px;
+    }
+
+    .table {
+      width: 100%;
+      border-collapse: collapse;
+      margin-bottom: 16px;
+    }
+
+    .table th,
+    .table td {
+      text-align: left;
+      padding: 5px 8px;
+      border-bottom: 1px solid var(--border);
+      vertical-align: top;
+      font-size: 12px;
+    }
+
+    .table th {
+      color: var(--muted);
+      font-weight: 500;
+      width: 200px;
+      font-size: 11px;
+      white-space: nowrap;
+    }
+
+    h3 {
+      font-size: 13px;
+      font-weight: 600;
+      margin: 0 0 8px 0;
+      color: var(--text);
+    }
+
+    pre {
+      background: var(--pre-bg);
+      border: 1px solid var(--border);
+      padding: 12px;
+      border-radius: 8px;
+      overflow: auto;
+      max-height: 360px;
+    }
+
+    .pill {
+      display: inline-block;
+      padding: 2px 8px;
+      border-radius: 999px;
+      font-size: 12px;
+      background: var(--pill-bg);
+      color: var(--accent);
+      border: 1px solid var(--pill-border);
+      margin-left: 6px;
+    }
+
+    .theme-toggle {
+      background: var(--panel-2);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 6px 10px;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      color: var(--text);
+      font-size: 14px;
+      transition: background-color 0.2s ease, transform 0.1s ease;
+    }
+
+    .theme-toggle:hover {
+      background: var(--panel);
+      transform: scale(1.02);
+    }
+
+    .theme-toggle svg {
+      width: 16px;
+      height: 16px;
+      fill: currentColor;
+    }
+
+    .toggle {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      margin-right: 12px;
+      color: var(--muted);
+      font-size: 12px;
+    }
+
+    .payload-tools {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin: 8px 0;
+    }
+
+    .muted {
+      color: var(--muted);
+    }
+
+    @media (max-width: 900px) {
       main {
-        display: grid;
-        grid-template-columns: 320px 1fr;
-        gap: 16px;
-        padding: 16px;
-        max-width: 1400px;
-        margin: 0 auto;
+        grid-template-columns: 1fr;
       }
-      .panel {
-        background: var(--panel);
-        border: 1px solid var(--border);
-        border-radius: 12px;
-        overflow: hidden;
-      }
-      .panel header {
-        position: static;
-        background: var(--panel-2);
-        border-bottom: 1px solid var(--border);
-      }
+
       .events {
-        max-height: calc(100vh - 140px);
-        overflow: auto;
+        max-height: 300px;
       }
-      .event {
-        padding: 10px 12px;
-        border-bottom: 1px solid var(--border);
-        cursor: pointer;
-      }
-      .event.active {
-        background: #222a3d;
-        border-left: 3px solid var(--accent);
-      }
-      .event small { color: var(--muted); }
-      .detail {
-        padding: 16px;
-        display: grid;
-        gap: 16px;
-      }
+    }
+
+    @media (max-width: 1100px) {
       .detail-grid {
-        display: grid;
-        grid-template-columns: 1fr 1fr;
-        gap: 16px;
+        grid-template-columns: 1fr;
       }
-      .table {
-        width: 100%;
-        border-collapse: collapse;
-        margin-bottom: 16px;
-      }
-      .table th,
-      .table td {
-        text-align: left;
-        padding: 8px 10px;
-        border-bottom: 1px solid var(--border);
-        vertical-align: top;
-      }
-      .table th {
-        color: var(--muted);
-        font-weight: 500;
-        width: 180px;
-      }
-      pre {
-        background: #0c0f17;
-        border: 1px solid var(--border);
-        padding: 12px;
-        border-radius: 8px;
-        overflow: auto;
-        max-height: 360px;
-      }
-      .pill {
-        display: inline-block;
-        padding: 2px 8px;
-        border-radius: 999px;
-        font-size: 12px;
-        background: #1b2a3d;
-        color: var(--accent);
-        border: 1px solid #2f4764;
-        margin-left: 6px;
-      }
-      .toggle {
-        display: inline-flex;
-        align-items: center;
-        gap: 6px;
-        margin-right: 12px;
-        color: var(--muted);
-        font-size: 12px;
-      }
-      .payload-tools {
-        display: flex;
-        align-items: center;
-        justify-content: space-between;
-        margin: 8px 0;
-      }
-      .muted {
-        color: var(--muted);
-      }
-      @media (max-width: 900px) {
-        main { grid-template-columns: 1fr; }
-        .events { max-height: 300px; }
-      }
-      @media (max-width: 1100px) {
-        .detail-grid { grid-template-columns: 1fr; }
-      }
-    </style>
-    <link rel="preconnect" href="https://fonts.googleapis.com" />
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-    <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;600&display=swap" rel="stylesheet" />
-  </head>
-  <body>
-    <header>
-      <div class="title-wrap">
-        <div class="title">Webhook Listener</div>
-        <div id="hookUrl" class="hook-url">/hook/</div>
-      </div>
-      <div class="controls">
+    }
+  </style>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;600&display=swap" rel="stylesheet" />
+</head>
+
+<body>
+  <header>
+    <div class="title-wrap">
+      <div class="title">Webhook Listener</div>
+      <div id="hookUrl" class="hook-url">/hook/</div>
+    </div>
+    <div class="controls">
+      <div class="ns-group">
         <label for="ns">Namespace</label>
         <select id="ns"></select>
-        <span id="status" class="pill">offline</span>
       </div>
-    </header>
-    <main>
-      <section class="panel">
-        <header>
-          <div class="title">Events</div>
-        </header>
-        <div id="events" class="events"></div>
-      </section>
-      <section class="panel">
-        <header>
-          <div class="title">Details</div>
-        </header>
-        <div class="detail">
-          <div class="detail-grid">
-            <section>
-              <h3>Request Details</h3>
-              <table class="table" id="meta"></table>
-            </section>
-            <section>
-              <h3>Headers</h3>
-              <table class="table" id="headers"></table>
-            </section>
-          </div>
-          <div class="detail-grid">
-            <section>
-              <h3>Query Strings</h3>
-              <table class="table" id="query"></table>
-            </section>
-            <section>
-              <h3>Form Values</h3>
-              <table class="table" id="form"></table>
-            </section>
-          </div>
+      <span id="status" class="pill">offline</span>
+      <button id="themeToggle" class="theme-toggle" aria-label="Toggle theme">
+        <svg id="themeIcon" viewBox="0 0 24 24"></svg>
+      </button>
+    </div>
+  </header>
+  <main>
+    <section class="panel">
+      <header style="display: flex; justify-content: space-between; align-items: center;">
+        <div class="title">Events</div>
+        <button id="clearBtn" class="btn btn-danger">Clear</button>
+      </header>
+      <div id="events" class="events"></div>
+    </section>
+    <section class="panel">
+      <header>
+        <div class="title">Details</div>
+      </header>
+      <div class="detail">
+        <div class="detail-grid">
           <section>
-            <h3>Request Content</h3>
-            <div class="payload-tools">
-              <div>
-                <label class="toggle"><input type="checkbox" id="formatJson" checked /> Format JSON</label>
-                <label class="toggle"><input type="checkbox" id="wrap" checked /> Word Wrap</label>
-              </div>
-              <div class="muted" id="payloadMeta"></div>
-            </div>
-            <pre id="payload"></pre>
+            <h3>Request Details</h3>
+            <table class="table" id="meta"></table>
+          </section>
+          <section>
+            <h3>Headers</h3>
+            <table class="table" id="headers"></table>
           </section>
         </div>
-      </section>
-    </main>
-    <script>
-      const nsSelect = document.getElementById("ns");
-      const eventsEl = document.getElementById("events");
-      const metaEl = document.getElementById("meta");
-      const queryEl = document.getElementById("query");
-      const formEl = document.getElementById("form");
-      const headersEl = document.getElementById("headers");
-      const payloadEl = document.getElementById("payload");
-      const payloadMetaEl = document.getElementById("payloadMeta");
-      const formatJsonEl = document.getElementById("formatJson");
-      const wrapEl = document.getElementById("wrap");
-      const statusEl = document.getElementById("status");
-      const hookUrlEl = document.getElementById("hookUrl");
+        <div class="detail-grid">
+          <section>
+            <h3>Query Strings</h3>
+            <table class="table" id="query"></table>
+          </section>
+          <section>
+            <h3>Form Values</h3>
+            <table class="table" id="form"></table>
+          </section>
+        </div>
+        <section>
+          <h3>Request Content</h3>
+          <div class="payload-tools">
+            <div>
+              <label class="toggle"><input type="checkbox" id="formatJson" checked /> Format JSON</label>
+              <label class="toggle"><input type="checkbox" id="wrap" checked /> Word Wrap</label>
+            </div>
+            <div class="muted" id="payloadMeta"></div>
+          </div>
+          <pre id="payload"></pre>
+        </section>
+      </div>
+    </section>
+  </main>
+  <script>
+    const nsSelect = document.getElementById("ns");
+    const eventsEl = document.getElementById("events");
+    const metaEl = document.getElementById("meta");
+    const queryEl = document.getElementById("query");
+    const formEl = document.getElementById("form");
+    const headersEl = document.getElementById("headers");
+    const payloadEl = document.getElementById("payload");
+    const payloadMetaEl = document.getElementById("payloadMeta");
+    const formatJsonEl = document.getElementById("formatJson");
+    const wrapEl = document.getElementById("wrap");
+    const statusEl = document.getElementById("status");
+    const hookUrlEl = document.getElementById("hookUrl");
+    const clearBtn = document.getElementById("clearBtn");
 
-      let events = [];
-      let currentNs = "";
-      let activeId = "";
+    let events = [];
+    let currentNs = "";
+    let activeId = "";
+    let confirmClear = false;
+    let confirmTimeout = null;
 
-      function setStatus(text, ok) {
-        statusEl.textContent = text;
-        statusEl.style.color = ok ? "var(--accent-2)" : "var(--accent)";
-      }
+    function setStatus(text, ok) {
+      statusEl.textContent = text;
+      statusEl.style.color = ok ? "var(--accent-2)" : "var(--accent)";
+    }
 
-      function renderEvents() {
-        eventsEl.innerHTML = "";
-        events.slice().reverse().forEach((evt) => {
-          const div = document.createElement("div");
-          div.className = "event";
-          if (evt.id === activeId) {
-            div.classList.add("active");
-          }
-          div.innerHTML = `<div><strong>${evt.method}</strong> <small>${evt.timestamp}</small></div>` +
-            `<div><small>${evt.path}</small></div>`;
-          div.onclick = () => {
-            activeId = evt.id;
-            showEvent(evt);
-            renderEvents();
-          };
-          eventsEl.appendChild(div);
-        });
-      }
+    function renderEvents() {
+      eventsEl.innerHTML = "";
+      events.slice().reverse().forEach((evt) => {
+        const div = document.createElement("div");
+        div.className = "event";
+        if (evt.id === activeId) {
+          div.classList.add("active");
+        }
+        div.innerHTML = `<div><strong>${evt.method}</strong> <small>${evt.timestamp}</small></div>` +
+          `<div><small>${evt.path}</small></div>`;
+        div.onclick = () => {
+          activeId = evt.id;
+          showEvent(evt);
+          renderEvents();
+        };
+        eventsEl.appendChild(div);
+      });
+    }
 
-      function showEvent(evt) {
-        const sizeBytes = Number(evt.sizeBytes ?? (evt.bodyRaw ? evt.bodyRaw.length : 0));
-        const durationMs = Number(evt.durationMs ?? 0);
-        metaEl.innerHTML = `
+    function showEvent(evt) {
+      const sizeBytes = Number(evt.sizeBytes ?? (evt.bodyRaw ? evt.bodyRaw.length : 0));
+      const durationMs = Number(evt.durationMs ?? 0);
+      metaEl.innerHTML = `
           <tr><th>Method</th><td>${evt.method || ""}</td></tr>
           <tr><th>URL</th><td>${evt.fullUrl || evt.path || ""}</td></tr>
           <tr><th>Host</th><td>${evt.host || ""}</td></tr>
@@ -284,116 +472,189 @@
           <tr><th>User-Agent</th><td>${evt.userAgent || ""}</td></tr>
         `;
 
-        const qs = evt.queryStrings || [];
-        queryEl.innerHTML = qs.length
-          ? qs.map((q) => `<tr><th>${q.name}</th><td>${q.value}</td></tr>`).join("")
-          : `<tr><th colspan="2">None</th></tr>`;
+      const qs = evt.queryStrings || [];
+      queryEl.innerHTML = qs.length
+        ? qs.map((q) => `<tr><th>${q.name}</th><td>${q.value}</td></tr>`).join("")
+        : `<tr><th colspan="2">None</th></tr>`;
 
-        const formValues = evt.formValues || [];
-        const formFiles = evt.formFiles || [];
-        const formRows = [
-          ...formValues.map((f) => `<tr><th>${f.name}</th><td>${f.value}</td></tr>`),
-          ...formFiles.map(
-            (f) => `<tr><th>${f.name}</th><td>${f.filename} (${f.mimeType})</td></tr>`
-          )
-        ];
-        formEl.innerHTML = formRows.length
-          ? formRows.join("")
-          : `<tr><th colspan="2">None</th></tr>`;
+      const formValues = evt.formValues || [];
+      const formFiles = evt.formFiles || [];
+      const formRows = [
+        ...formValues.map((f) => `<tr><th>${f.name}</th><td>${f.value}</td></tr>`),
+        ...formFiles.map(
+          (f) => `<tr><th>${f.name}</th><td>${f.filename} (${f.mimeType})</td></tr>`
+        )
+      ];
+      formEl.innerHTML = formRows.length
+        ? formRows.join("")
+        : `<tr><th colspan="2">None</th></tr>`;
 
-        headersEl.innerHTML = Object.entries(evt.headers || {})
-          .map(([k, v]) => `<tr><th>${k}</th><td>${Array.isArray(v) ? v.join(", ") : v}</td></tr>`)
-          .join("");
+      headersEl.innerHTML = Object.entries(evt.headers || {})
+        .map(([k, v]) => `<tr><th>${k}</th><td>${Array.isArray(v) ? v.join(", ") : v}</td></tr>`)
+        .join("");
 
-        const size = sizeBytes || 0;
-        payloadMetaEl.textContent = evt.contentLength
-          ? `content-length: ${evt.contentLength} | ${size} bytes`
-          : `${size} bytes`;
+      const size = sizeBytes || 0;
+      payloadMetaEl.textContent = evt.contentLength
+        ? `content-length: ${evt.contentLength} | ${size} bytes`
+        : `${size} bytes`;
 
-        const useWrap = wrapEl.checked;
-        payloadEl.style.whiteSpace = useWrap ? "pre-wrap" : "pre";
+      const useWrap = wrapEl.checked;
+      payloadEl.style.whiteSpace = useWrap ? "pre-wrap" : "pre";
 
-        if (evt.bodyJson !== undefined && evt.bodyJson !== null && formatJsonEl.checked) {
-          payloadEl.textContent = JSON.stringify(evt.bodyJson, null, 2);
-        } else {
-          payloadEl.textContent = evt.bodyRaw || "(empty)";
-        }
+      if (evt.bodyJson !== undefined && evt.bodyJson !== null && formatJsonEl.checked) {
+        payloadEl.textContent = JSON.stringify(evt.bodyJson, null, 2);
+      } else {
+        payloadEl.textContent = evt.bodyRaw || "(empty)";
       }
+    }
 
-      async function loadNamespaces() {
-        const res = await fetch("/api/namespaces");
-        const data = await res.json();
-        nsSelect.innerHTML = "";
-        data.namespaces.forEach((ns) => {
-          const opt = document.createElement("option");
-          opt.value = ns;
-          opt.textContent = ns;
-          nsSelect.appendChild(opt);
-        });
-        currentNs = data.namespaces[0] || "";
-        nsSelect.value = currentNs;
-        updateHookUrl();
-      }
-
-      async function loadEvents() {
-        if (!currentNs) return;
-        const res = await fetch(`/api/events?ns=${encodeURIComponent(currentNs)}`);
-        const data = await res.json();
-        events = data.events || [];
-        renderEvents();
-        if (events.length) {
-          activeId = events[events.length - 1].id;
-          showEvent(events[events.length - 1]);
-          renderEvents();
-        }
-      }
-
-      nsSelect.addEventListener("change", async () => {
-        currentNs = nsSelect.value;
-        updateHookUrl();
-        await loadEvents();
+    async function loadNamespaces() {
+      const res = await fetch("/api/namespaces");
+      const data = await res.json();
+      nsSelect.innerHTML = "";
+      data.namespaces.forEach((ns) => {
+        const opt = document.createElement("option");
+        opt.value = ns;
+        opt.textContent = ns;
+        nsSelect.appendChild(opt);
       });
+      // Restore saved namespace or use first one
+      const savedNs = localStorage.getItem("selectedNamespace");
+      if (savedNs && data.namespaces.includes(savedNs)) {
+        currentNs = savedNs;
+      } else {
+        currentNs = data.namespaces[0] || "";
+      }
+      nsSelect.value = currentNs;
+      updateHookUrl();
+    }
 
-      function connectWs() {
-        const proto = location.protocol === "https:" ? "wss" : "ws";
-        const ws = new WebSocket(`${proto}://${location.host}/ws`);
-        ws.onopen = () => setStatus("live", true);
-        ws.onclose = () => setStatus("offline", false);
-        ws.onmessage = (msg) => {
-          try {
-            const data = JSON.parse(msg.data);
+    async function loadEvents() {
+      if (!currentNs) return;
+      const res = await fetch(`/api/events?ns=${encodeURIComponent(currentNs)}`);
+      const data = await res.json();
+      events = data.events || [];
+      renderEvents();
+      if (events.length) {
+        activeId = events[events.length - 1].id;
+        showEvent(events[events.length - 1]);
+        renderEvents();
+      }
+    }
+
+    nsSelect.addEventListener("change", async () => {
+      currentNs = nsSelect.value;
+      localStorage.setItem("selectedNamespace", currentNs);
+      updateHookUrl();
+      await loadEvents();
+    });
+
+    function connectWs() {
+      const proto = location.protocol === "https:" ? "wss" : "ws";
+      const ws = new WebSocket(`${proto}://${location.host}/ws`);
+      ws.onopen = () => setStatus("live", true);
+      ws.onclose = () => setStatus("offline", false);
+      ws.onmessage = (msg) => {
+        try {
+          const data = JSON.parse(msg.data);
           if (data.type === "event" && data.event.namespace === currentNs) {
             events.push(data.event);
             activeId = data.event.id;
             renderEvents();
             showEvent(data.event);
           }
-          } catch {}
-        };
-      }
+        } catch { }
+      };
+    }
 
-      function refreshActive() {
-        if (events.length) {
-          showEvent(events[events.length - 1]);
+    function refreshActive() {
+      if (events.length) {
+        showEvent(events[events.length - 1]);
+      }
+    }
+
+    function updateHookUrl() {
+      if (!currentNs) {
+        hookUrlEl.textContent = "/hook/";
+        return;
+      }
+      hookUrlEl.textContent = `${location.protocol}//${location.host}/hook/${currentNs}`;
+    }
+
+    formatJsonEl.addEventListener("change", refreshActive);
+    wrapEl.addEventListener("change", refreshActive);
+
+    // Clear button with inline confirmation
+    function resetClearBtn() {
+      confirmClear = false;
+      clearBtn.textContent = "Clear";
+      clearBtn.classList.remove("btn-confirm");
+      clearBtn.classList.add("btn-danger");
+    }
+
+    clearBtn.addEventListener("click", async () => {
+      if (confirmTimeout) clearTimeout(confirmTimeout);
+
+      if (!confirmClear) {
+        // First click - show confirmation
+        confirmClear = true;
+        clearBtn.textContent = "Confirm?";
+        clearBtn.classList.remove("btn-danger");
+        clearBtn.classList.add("btn-confirm");
+        // Auto-reset after 3 seconds
+        confirmTimeout = setTimeout(resetClearBtn, 3000);
+      } else {
+        // Second click - clear events on server and UI
+        try {
+          await fetch(`/api/events?ns=${encodeURIComponent(currentNs)}`, { method: "DELETE" });
+        } catch (e) {
+          console.error("Failed to clear events:", e);
         }
+        events = [];
+        activeId = "";
+        renderEvents();
+        metaEl.innerHTML = "";
+        queryEl.innerHTML = "";
+        formEl.innerHTML = "";
+        headersEl.innerHTML = "";
+        payloadEl.textContent = "";
+        payloadMetaEl.textContent = "";
+        resetClearBtn();
       }
+    });
 
-      function updateHookUrl() {
-        if (!currentNs) {
-          hookUrlEl.textContent = "/hook/";
-          return;
-        }
-        hookUrlEl.textContent = `${location.protocol}//${location.host}/hook/${currentNs}`;
-      }
+    // Theme toggle functionality
+    const themeToggle = document.getElementById("themeToggle");
+    const themeIcon = document.getElementById("themeIcon");
+    const sunPath = "M12 7a5 5 0 100 10 5 5 0 000-10zM2 13h2a1 1 0 100-2H2a1 1 0 100 2zm18 0h2a1 1 0 100-2h-2a1 1 0 100 2zm-9-9a1 1 0 011-1V2a1 1 0 10-2 0v2a1 1 0 011 1zm0 18a1 1 0 01-1 1v2a1 1 0 102 0v-2a1 1 0 01-1-1zM5.64 6.64a1 1 0 010-1.41l-1.42-1.42a1 1 0 10-1.41 1.41l1.42 1.42a1 1 0 001.41 0zm12.73 12.73a1 1 0 010-1.41l1.42 1.41a1 1 0 101.41-1.41l-1.42-1.42a1 1 0 00-1.41 1.42l-1.41 1.41a1 1 0 001.41 0zM4.22 19.78l1.42-1.41a1 1 0 10-1.41-1.42l-1.42 1.42a1 1 0 101.41 1.41zm14.14-14.14l1.41-1.42a1 1 0 10-1.41-1.41l-1.41 1.41a1 1 0 101.41 1.42z";
+    const moonPath = "M21.64 13a1 1 0 00-1.05-.14 8.05 8.05 0 01-3.37.73 8.15 8.15 0 01-8.14-8.1 8.59 8.59 0 01.25-2A1 1 0 008 2.36a10.14 10.14 0 1014 11.69 1 1 0 00-.36-1.05zm-9.5 6.69A8.14 8.14 0 017.08 5.22a10.14 10.14 0 0010.48 10.48 8.14 8.14 0 01-5.42 4z";
 
-      formatJsonEl.addEventListener("change", refreshActive);
-      wrapEl.addEventListener("change", refreshActive);
+    function getPreferredTheme() {
+      const stored = localStorage.getItem("theme");
+      if (stored) return stored;
+      return window.matchMedia("(prefers-color-scheme: light)").matches ? "light" : "dark";
+    }
 
-      (async () => {
-        await loadNamespaces();
-        await loadEvents();
-        connectWs();
-      })();
-    </script>
-  </body>
+    function setTheme(theme) {
+      document.documentElement.setAttribute("data-theme", theme);
+      localStorage.setItem("theme", theme);
+      themeIcon.innerHTML = `<path d="${theme === 'light' ? moonPath : sunPath}"/>`;
+    }
+
+    themeToggle.addEventListener("click", () => {
+      const current = document.documentElement.getAttribute("data-theme") || "dark";
+      setTheme(current === "dark" ? "light" : "dark");
+    });
+
+    // Initialize theme
+    setTheme(getPreferredTheme());
+
+    (async () => {
+      await loadNamespaces();
+      await loadEvents();
+      connectWs();
+    })();
+  </script>
+</body>
+
 </html>

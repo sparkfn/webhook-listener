@@ -43,7 +43,7 @@ steps:
       - echo "Commit ${CI_COMMIT_SHA} by ${CI_COMMIT_AUTHOR}"
       - echo "Check pipeline at ${CI_PIPELINE_FORGE_URL}"
     depends_on:
-      - docker-build
+      - build
     when:
       - event: [push, pull_request, tag, manual]
         status: failure

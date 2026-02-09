@@ -30,11 +30,12 @@ cd webhook-listener
 
 ### 2. Configure namespaces
 
-Edit `docker-compose.yml` to set your desired namespaces:
+Copy `.env.example` to `.env` and edit the `NAMESPACES` variable:
 
-```yaml
-environment:
-  - NAMESPACES=alpha,beta,dev,prod
+```bash
+cp .env.example .env
+# Then edit .env to set your desired namespaces:
+# NAMESPACES=alpha,beta,dev,prod
 ```
 
 Namespaces act as isolated webhook endpoints. For example, with the above configuration:
@@ -59,25 +60,22 @@ Open your browser to:
 
 ### Environment Variables
 
-Configure these in your `docker-compose.yml` or `.env` file:
+Configure these in your `.env` file (see `.env.example`):
 
 | Variable | Default | Description |
 |----------|---------|-------------|
 | `NAMESPACES` | `""` | Comma-separated list of allowed namespaces (e.g., `alpha,beta,dev`) |
-| `DATA_DIR` | `/data` | Directory path for event persistence (inside container) |
+| `DATA_DIR` | `./data` (code), `/data` (Dockerfile) | Directory path for event persistence. The Dockerfile sets `/data`; without Docker the code defaults to `./data` (relative). |
 | `PORT` | `18800` | Port for the webhook listener service |
 
 ### Example Configuration
 
-```yaml
-# docker-compose.yml
-services:
-  web:
-    environment:
-      - NAMESPACES=github,stripe,slack,test
-      - DATA_DIR=/data
-      - PORT=18800
+```bash
+# .env
+NAMESPACES=github,stripe,slack,test
 ```
+
+`DATA_DIR` and `PORT` are set in `docker-compose.yml` and typically do not need changing.
 
 ## Usage
 
@@ -86,8 +84,10 @@ services:
 Configure your external service to send webhooks to:
 
 ```
-POST http://your-server:18800/hook/<namespace>
+<ANY METHOD> http://your-server:18800/hook/<namespace>
 ```
+
+The endpoint accepts any HTTP method (`GET`, `POST`, `PUT`, `DELETE`, etc.).
 
 **Examples:**
 
@@ -135,7 +135,7 @@ The web interface provides:
 ### Webhook Reception
 
 ```
-POST /hook/:namespace
+ANY /hook/:namespace
 ```
 
 Accepts any HTTP method (`GET`, `POST`, `PUT`, `DELETE`, etc.) and captures the full request.
@@ -286,30 +286,12 @@ webhook-listener/
 
 ## Security Considerations
 
-⚠️ **Important**: This tool is designed for private development use and has no built-in authentication or authorization.
+This tool is designed for private development use and has no built-in authentication or authorization.
 
 - **No authentication**: Anyone who can access your server can view all webhooks
 - **No encryption**: Use a reverse proxy with TLS/SSL for production use
 - **No rate limiting**: Be careful when exposing to the public internet
 - **Suitable for**: Local development, private networks, behind VPNs, or behind auth proxies
-
-### Recommended Security Setup
-
-For production use, place behind an authentication proxy:
-
-```yaml
-# docker-compose.yml
-services:
-  proxy:
-    image: caddy:2
-    ports:
-      - "80:80"
-      - "443:443"
-    volumes:
-      - ./Caddyfile:/etc/caddy/Caddyfile
-    depends_on:
-      - web
-```
 
 ## Troubleshooting
 
@@ -328,7 +310,7 @@ services:
 
 ### WebSocket not connecting
 
-1. **Check status indicator**: Look at the "online/offline" pill in the UI
+1. **Check status indicator**: Look at the "live/offline" pill in the UI
 2. **Check browser console**: Look for WebSocket connection errors
 3. **Verify proxy**: If using a reverse proxy, ensure WebSocket upgrades are allowed
 
@@ -396,7 +378,3 @@ For detailed architectural decisions and design rationale, see [PDR.md](PDR.md).
 ## Contributing
 
 Contributions are welcome! The project is intentionally simple and well-documented.
-
-## License
-
-See LICENSE file for details.

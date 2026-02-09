@@ -433,6 +433,13 @@
     let confirmClear = false;
     let confirmTimeout = null;
 
+    function esc(str) {
+      if (str === null || str === undefined) return "";
+      const div = document.createElement('div');
+      div.textContent = String(str);
+      return div.innerHTML;
+    }
+
     function setStatus(text, ok) {
       statusEl.textContent = text;
       statusEl.style.color = ok ? "var(--accent-2)" : "var(--accent)";
@@ -446,8 +453,8 @@
         if (evt.id === activeId) {
           div.classList.add("active");
         }
-        div.innerHTML = `<div><strong>${evt.method}</strong> <small>${evt.timestamp}</small></div>` +
-          `<div><small>${evt.path}</small></div>`;
+        div.innerHTML = `<div><strong>${esc(evt.method)}</strong> <small>${esc(evt.timestamp)}</small></div>` +
+          `<div><small>${esc(evt.path)}</small></div>`;
         div.onclick = () => {
           activeId = evt.id;
           showEvent(evt);
@@ -461,28 +468,28 @@
       const sizeBytes = Number(evt.sizeBytes ?? (evt.bodyRaw ? evt.bodyRaw.length : 0));
       const durationMs = Number(evt.durationMs ?? 0);
       metaEl.innerHTML = `
-          <tr><th>Method</th><td>${evt.method || ""}</td></tr>
-          <tr><th>URL</th><td>${evt.fullUrl || evt.path || ""}</td></tr>
-          <tr><th>Host</th><td>${evt.host || ""}</td></tr>
-          <tr><th>Date</th><td>${evt.timestamp || ""}</td></tr>
+          <tr><th>Method</th><td>${esc(evt.method)}</td></tr>
+          <tr><th>URL</th><td>${esc(evt.fullUrl || evt.path)}</td></tr>
+          <tr><th>Host</th><td>${esc(evt.host)}</td></tr>
+          <tr><th>Date</th><td>${esc(evt.timestamp)}</td></tr>
           <tr><th>Size</th><td>${sizeBytes} bytes</td></tr>
           <tr><th>Time</th><td>${durationMs.toFixed(3)} ms</td></tr>
-          <tr><th>ID</th><td>${evt.id || ""}</td></tr>
-          <tr><th>Remote</th><td>${evt.remoteAddress || ""}</td></tr>
-          <tr><th>User-Agent</th><td>${evt.userAgent || ""}</td></tr>
+          <tr><th>ID</th><td>${esc(evt.id)}</td></tr>
+          <tr><th>Remote</th><td>${esc(evt.remoteAddress)}</td></tr>
+          <tr><th>User-Agent</th><td>${esc(evt.userAgent)}</td></tr>
         `;
 
       const qs = evt.queryStrings || [];
       queryEl.innerHTML = qs.length
-        ? qs.map((q) => `<tr><th>${q.name}</th><td>${q.value}</td></tr>`).join("")
+        ? qs.map((q) => `<tr><th>${esc(q.name)}</th><td>${esc(q.value)}</td></tr>`).join("")
         : `<tr><th colspan="2">None</th></tr>`;
 
       const formValues = evt.formValues || [];
       const formFiles = evt.formFiles || [];
       const formRows = [
-        ...formValues.map((f) => `<tr><th>${f.name}</th><td>${f.value}</td></tr>`),
+        ...formValues.map((f) => `<tr><th>${esc(f.name)}</th><td>${esc(f.value)}</td></tr>`),
         ...formFiles.map(
-          (f) => `<tr><th>${f.name}</th><td>${f.filename} (${f.mimeType})</td></tr>`
+          (f) => `<tr><th>${esc(f.name)}</th><td>${esc(f.filename)} (${esc(f.mimeType)})</td></tr>`
         )
       ];
       formEl.innerHTML = formRows.length
@@ -490,7 +497,7 @@
         : `<tr><th colspan="2">None</th></tr>`;
 
       headersEl.innerHTML = Object.entries(evt.headers || {})
-        .map(([k, v]) => `<tr><th>${k}</th><td>${Array.isArray(v) ? v.join(", ") : v}</td></tr>`)
+        .map(([k, v]) => `<tr><th>${esc(k)}</th><td>${esc(Array.isArray(v) ? v.join(", ") : v)}</td></tr>`)
         .join("");
 
       const size = sizeBytes || 0;
